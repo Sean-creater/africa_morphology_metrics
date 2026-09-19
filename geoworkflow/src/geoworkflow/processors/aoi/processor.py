@@ -7,9 +7,7 @@ enhanced processor class using the Phase 2.1 infrastructure.
 """
 
 from typing import Dict, Any, List, Optional
-from pathlib import Path
 import logging
-import sys
 
 try:
     import geopandas as gpd
@@ -23,14 +21,8 @@ from geoworkflow.core.exceptions import ProcessingError, ValidationError, Geospa
 from geoworkflow.schemas.config_models import AOIConfig
 from geoworkflow.core.base import ProcessingResult
 
-# Import projection mapping helper
-# Add parent directory to path to import projection_helper from Metrix root
-metrix_root = Path(__file__).resolve().parents[5]  # Up to Metrix from processors/aoi/
-if str(metrix_root) not in sys.path:
-    sys.path.insert(0, str(metrix_root))
-
 try:
-    from projection_helper import get_projection_mapper
+    from africa_morphology_metrics.projection import get_projection_mapper
     HAS_PROJECTION_MAPPER = True
 except ImportError:
     HAS_PROJECTION_MAPPER = False

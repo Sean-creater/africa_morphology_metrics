@@ -27,18 +27,10 @@ their raw per-city CSV) but are excluded from the cleaned-output directory,
 since their non-road columns already fail quality checks independently of
 the road-network addition.
 
-External dependencies (not part of this cleaning package)
------------------------------------------------------------
-This script depends on the upstream morphology-computation pipeline's road
-and connectivity modules, which live in the main pipeline package rather
-than this cleaning package:
-  - ``streetnetwork_metrics.calculate_street_network_metrics_with_graph``
-  - ``connectivity_metrics_v39_no_buffer.calculate_connectivity_metrics``
-    (or the v38/v37 fallback implementations)
-  - ``osm_highways_processor.process_osm_highways_for_cities``
-  - ``projection_helper.get_crs_for_city``
-Point ``--pipeline-root`` at the directory containing these modules (the
-upstream morphology-metrics package) to make them importable.
+Code dependencies
+-----------------
+The road, connectivity, OSM and projection implementations are imported from
+the published ``africa_morphology_metrics`` package in this repository.
 
 Inputs
 ------
@@ -69,6 +61,11 @@ import pandas as pd
 import geopandas as gpd
 import momepy
 from tqdm import tqdm
+
+from africa_morphology_metrics.streetnetwork_metrics import calculate_street_network_metrics_with_graph
+from africa_morphology_metrics.connectivity import calculate_connectivity_metrics
+from africa_morphology_metrics.osm_network import process_osm_highways_for_cities
+from africa_morphology_metrics.projection import get_crs_for_city
 
 SUFFIX = '_grid_250m_hex_enriched_metrics_v15.csv'
 SHP_SUFFIX = '_grid_250m_hex_enriched_metrics_v15.shp'
@@ -335,30 +332,14 @@ def main():
     parser.add_argument('--agglomeration-file', type=Path, required=True,
                          help='GeoPackage with Agglomeration_Name -> ISO3 lookup '
                               '(used to pick each city\'s projected CRS).')
-    parser.add_argument('--pipeline-root', type=Path, required=True,
-                         help='Directory containing the upstream morphology-metrics '
-                              'pipeline modules: streetnetwork_metrics.py, '
-                              'connectivity_metrics_v39_no_buffer.py (or v38/v37), '
-                              'osm_highways_processor.py, projection_helper.py. '
-                              'These are not part of this cleaning package.')
+    parser.add_argument('--country-boundaries-file', type=Path, required=True,
+                         help='Country boundaries GeoPackage used by the bundled OSM processor.')
     parser.add_argument('--grid-data-base', type=Path, required=True,
                          help='Base directory of country-level grid data used by '
                               'the OSM highway processor to determine city extents.')
     parser.add_argument('--log-path', type=Path, default=Path('add_road_network_metrics.log'),
                          help='Path to write the run log to.')
     args = parser.parse_args()
-
-    sys.path.insert(0, str(args.pipeline_root))
-    from streetnetwork_metrics import calculate_street_network_metrics_with_graph
-    try:
-        from connectivity_metrics_v39_no_buffer import calculate_connectivity_metrics
-    except ImportError:
-        try:
-            from connectivity_metrics_v38_igraph import calculate_connectivity_metrics
-        except ImportError:
-            from connectivity_metrics_v37_cached import calculate_connectivity_metrics
-    from osm_highways_processor import process_osm_highways_for_cities
-    from projection_helper import get_crs_for_city
 
     logging.basicConfig(
         level=logging.INFO,
@@ -405,6 +386,7 @@ def main():
                 base_output_dir=args.data_root,
                 agglomeration_file=args.agglomeration_file,
                 grid_data_base=args.grid_data_base,
+                country_boundaries_file=args.country_boundaries_file,
                 logger=logger,
                 force_redownload=False,
                 overwrite_existing=False,

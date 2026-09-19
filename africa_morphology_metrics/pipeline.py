@@ -114,11 +114,6 @@ class Config:
     STRICT_MODE = True  # Halt on any failure rather than auto-skipping.
     START_FROM_PHASE = 1  # Set to 2 or 3 to skip already-completed phases.
 
-    # ==================== GRID WORKFLOW ====================
-    # If True and the grid is missing for a city, invoke the companion
-    # grid-generation pipeline (GRID_WORKFLOW_SCRIPT) to produce it.
-    AUTO_RUN_GRID_WORKFLOW = True
-
     # ==================== SKIP / OVERWRITE FLAGS ====================
     SKIP_BUILDING_EXTRACTION = False  # Must stay False for 3D metrics (FormFactor, H2F, VolDens).
     SKIP_METRIC_CALCULATION = False
@@ -131,7 +126,6 @@ class Config:
 
     # ==================== FILE PATHS ====================
     # Companion grid-generation pipeline (africa_hex_grid_workflow):
-    GRID_WORKFLOW_SCRIPT = Path("/path/to/africa_hex_grid_workflow/pipeline.py")
     GRID_DATA_BASE = Path("/path/to/africa_hex_grid_workflow/data/03_country_grids")
     TIF_DATA_BASE = Path("/path/to/africa_hex_grid_workflow/data/00_country_TIF")
     # AFRICAPOLIS agglomeration boundaries and country/administrative boundaries
@@ -482,83 +476,12 @@ class Config:
         for directory in [self.buildings_output_dir, self.analysis_output_dir]:
             directory.mkdir(parents=True, exist_ok=True)
 
-    def check_and_run_grid_workflow(self):
+    def check_grid_inputs(self):
         if self.grid_boundary_file.exists() and self.grid_file.exists():
             logger.info(f"Grid exists for {self.CITY_NAME}")
             return True
-        if not self.AUTO_RUN_GRID_WORKFLOW:
-            logger.warning(f"Grid not found for {self.CITY_NAME}")
-            return False
-        logger.info(f"Generating grid for {self.CITY_NAME}...")
-        return self._run_grid_workflow()
-
-    def _run_grid_workflow(self):
-        """Invoke the companion grid-generation pipeline as a subprocess for one city."""
-        import subprocess
-        if not self.GRID_WORKFLOW_SCRIPT.exists():
-            logger.error("Companion grid-generation script not found (see Config.GRID_WORKFLOW_SCRIPT)")
-            return False
-        try:
-            iso3 = self.get_iso3_for_city(self.CITY_NAME)
-            if not iso3:
-                logger.warning(f"Cannot determine ISO3 for {self.CITY_NAME}, using fallback")
-                iso3 = "UNK"
-
-            target_crs = self.TARGET_CRS
-            city_index = self._get_city_index_in_country(iso3, self.CITY_NAME)
-
-            cmd = [
-                sys.executable,
-                str(self.GRID_WORKFLOW_SCRIPT),
-                '--aoi-mode', 'city',
-                '--aoi-name', self.CITY_NAME,
-                '--target-crs', target_crs,
-                '--country-iso3', iso3,
-                '--city-index', str(city_index)
-            ]
-
-            logger.info(f"Generating grid for {self.CITY_NAME}:")
-            logger.info(f"  CRS: {target_crs}")
-            logger.info(f"  ISO3: {iso3}")
-            logger.info(f"  City Index: {city_index}")
-
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=3600)
-            if result.returncode == 0:
-                logger.info(f"Grid generated for {self.CITY_NAME} in {target_crs}")
-                if result.stdout:
-                    for line in result.stdout.strip().split('\n'):
-                        if 'WARNING' in line or 'ERROR' in line or 'Multiple cities' in line or 'ISO3' in line or 'CRITICAL' in line:
-                            logger.info(f"  GridWorkflow: {line}")
-                return True
-            else:
-                logger.error(f"Grid generation failed for {self.CITY_NAME}")
-                logger.error(f"Error output: {result.stderr}")
-                if result.stdout:
-                    logger.error(f"Standard output: {result.stdout}")
-                return False
-        except Exception as e:
-            logger.error(f"Error: {str(e)}")
-            return False
-
-    def _get_city_index_in_country(self, iso3: str, city_name: str) -> int:
-        """
-        City's 1-based position in its country's alphabetically sorted city
-        list, used by the companion grid pipeline to build a stable,
-        deterministic GridID.
-        """
-        try:
-            cities = self.get_cities_in_country(iso3)
-            cities_sorted = sorted(cities)
-            if city_name in cities_sorted:
-                index = cities_sorted.index(city_name) + 1
-                logger.debug(f"City {city_name} is #{index} in {iso3} ({len(cities_sorted)} total cities)")
-                return index
-            else:
-                logger.warning(f"City {city_name} not found in {iso3} city list")
-                return 9999
-        except Exception as e:
-            logger.error(f"Failed to get city index: {e}")
-            return 9999
+        logger.warning(f"Required grid or boundary not found for {self.CITY_NAME}")
+        return False
 
 
 # ============================================================================
@@ -902,9 +825,9 @@ def process_single_city(config, city_name):
             "building_count": buildings_result.get("count", 0)}
 
 
-def run_grid_workflow_batch(config, cities):
-    """Run the companion grid-generation pipeline for every city in a batch."""
-    logger.info("=" * 80 + f"\nPHASE 1: Grid Generation ({len(cities)} cities)\n" + "=" * 80)
+def check_grid_inputs_batch(config, cities):
+    """Select cities with both required companion-grid input files."""
+    logger.info("=" * 80 + f"\nPHASE 1: Grid Input Check ({len(cities)} cities)\n" + "=" * 80)
     successful_cities = []
     failed_cities = []
 
@@ -915,11 +838,8 @@ def run_grid_workflow_batch(config, cities):
             if config.grid_boundary_file.exists() and config.grid_file.exists():
                 logger.info(f"[{i}/{len(cities)}] {city}: Grid exists, skipping")
                 successful_cities.append(city)
-            elif config._run_grid_workflow():
-                logger.info(f"[{i}/{len(cities)}] {city}: Grid generated")
-                successful_cities.append(city)
             else:
-                logger.error(f"[{i}/{len(cities)}] {city}: Failed")
+                logger.error(f"[{i}/{len(cities)}] {city}: Required grid input missing")
                 failed_cities.append(city)
         except Exception as e:
             logger.error(f"[{i}/{len(cities)}] {city}: Error: {str(e)}")
@@ -1020,8 +940,8 @@ def main():
     if config.PROCESSING_MODE == "single_city":
         logger.info(f"Mode: Single City - {config.CITY_NAME}")
 
-        if not config.check_and_run_grid_workflow():
-            logger.error("Grid files unavailable. Set AUTO_RUN_GRID_WORKFLOW=True or run the grid workflow manually.")
+        if not config.check_grid_inputs():
+            logger.error("Grid input files unavailable. Supply the companion grid outputs first.")
             sys.exit(1)
 
         if not config.SKIP_STREET_NETWORK_CALCULATION:
@@ -1059,7 +979,7 @@ def main():
             sys.exit(1)
         logger.info(f"Processing {len(cities)} cities: {cities}")
 
-        grid_results = run_grid_workflow_batch(config, cities)
+        grid_results = check_grid_inputs_batch(config, cities)
         if not grid_results["successful_cities"]:
             logger.error("No valid grids. Cannot proceed.")
             sys.exit(1)
@@ -1092,7 +1012,7 @@ def main():
             sys.exit(1)
         logger.info(f"Found {len(cities)} cities")
 
-        grid_results = run_grid_workflow_batch(config, cities)
+        grid_results = check_grid_inputs_batch(config, cities)
         if not grid_results["successful_cities"]:
             logger.error("No valid grids. Cannot proceed.")
             sys.exit(1)
@@ -1266,7 +1186,7 @@ def main():
                         country_tracker[iso3]['start_time'] = time.time()
 
                 try:
-                    if not config.check_and_run_grid_workflow():
+                    if not config.check_grid_inputs():
                         error_msg = f"Grid generation failed for {city_name}"
                         logger.error(error_msg)
                         phase_failed.append(city_name)

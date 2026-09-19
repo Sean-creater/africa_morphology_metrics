@@ -21,6 +21,10 @@ the grid itself is built, its CRS-handling rationale, and its AFRICAPOLIS/
 Natural Earth boundary-file sourcing — this README does not repeat that
 material.
 
+The grid is a required **data input** to the published code. This repository
+does not execute an external grid-generation script; prepare the companion
+grid outputs before running it.
+
 ## Pipeline stages
 
 1. **Open Buildings extraction** (`gcs_buildings.py`) — download building
@@ -323,7 +327,7 @@ data/
         excluded_cities.md          # 136 cities excluded from building/plot-morphology analyses
         projection_mapping.json     # per-country/per-city UTM CRS lookup table
         studyarea/                  # 48-country study-area boundary (reference only)
-    example/                   # one real, small illustrative example city (Ndioum, Senegal)
+    example/                   # real Ndioum input bundle and historical output
 ```
 
 No bulk data is bundled. A full pipeline run reads/writes a large working
@@ -334,10 +338,12 @@ be gitignored/regenerated per run.
 
 ## Example output
 
-`data/example/Ndioum_Senegal/` contains the real (not synthetic) cleaned
-output for Ndioum, Senegal — a small secondary town chosen because its hex
-grid is small enough (33 cells) to check in directly as a schema
-reference. See `data/example/README.md`.
+`data/example/Ndioum_Senegal/` contains the real (not synthetic) input
+bundle and historical cleaned output for Ndioum, Senegal. The one-command
+two-project reproduction runs `africa_hex_grid_workflow` to rebuild the
+49-column grid, then this project's metric calculators to produce the
+172-column CSV and Shapefile. See `data/example/README.md` for input
+provenance, the command and the observed SHA-256 match.
 
 ## Environment / setup
 

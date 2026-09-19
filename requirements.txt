@@ -18,6 +18,8 @@ python-igraph>=0.11.0
 # Data processing
 pandas>=2.0.0
 numpy>=1.24.0
+scipy>=1.10.0
+libpysal>=4.9.0
 
 # OSM PBF reading: pyogrio is tried first (GDAL-backed, substantially
 # faster), with pyrosm as an automatic fallback if pyogrio fails to read a

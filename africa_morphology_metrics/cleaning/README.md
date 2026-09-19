@@ -25,6 +25,12 @@ output directories.
 
 ## Run order
 
+First run `python -m africa_morphology_metrics.cleaning.quality_summary`
+with `--data-root` and `--output` to produce the `quality_summary.csv`
+required by step 4. This ports the original `Metrix/data_quality_check.py`
+inventory calculation: column count plus the number of absent or entirely
+zero/NaN raster indicators. It is a prerequisite audit, not a data mutation.
+
 The dependency order below was verified by tracing each script's actual
 file reads/writes (not just filename/mtime order). It matches the original
 numbered listing, with one exception noted under script 6.
@@ -110,10 +116,11 @@ numbered listing, with one exception noted under script 6.
    `--city-inventory` (status/exclusion_reason/n_cols). This is the step
    that finally brings a city to the full 172-column schema. It depends on
    upstream pipeline modules (street-network and connectivity metric
-   calculators, OSM highway processor, projection helper) that live in the
-   main morphology-computation package rather than this cleaning package —
-   see the module docstring for the exact import list and the
-   `--pipeline-root` argument used to make them importable. A fixed list
+   calculators, OSM highway processor, projection helper) from the bundled
+   `africa_morphology_metrics` package. Run it with
+   `python -m africa_morphology_metrics.cleaning.add_road_network_metrics`
+   from the repository root (or install the package first); provide
+   `--country-boundaries-file` for the bundled OSM processor. A fixed list
    of cities with pre-existing WSF3D/land-cover issues (`KNOWN_BAD`) still
    get road metrics computed but are excluded from the cleaned-output
    directory regardless.
