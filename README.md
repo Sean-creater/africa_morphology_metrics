@@ -91,6 +91,18 @@ package's own modules instead of importing the vendored copy:
 `osm_clipping.py` (AOI clipping, including a tiled parallel path for
 country-scale networks).
 
+`geoworkflow/` is vendored as a complete, coherent library rather than
+trimmed to only the pieces this pipeline calls, since it is independently
+versioned and maintained. This means it includes code this pipeline does
+not use — most notably an Earth Engine-based building-extraction path
+(`processors/extraction/open_buildings.py`, `utils/earth_engine_utils.py`)
+that is an alternative to, and entirely separate from, the GCS-based
+extraction (`open_buildings_gcs.py`) this pipeline actually calls. It
+requires no credentials to import and contains none; it reads Earth Engine
+credentials only from a user-supplied service-account key path or the
+standard `GOOGLE_APPLICATION_CREDENTIALS` environment variable, exactly
+like the GCS path does for its own credentials.
+
 ## Data source requirements
 
 None of the following are bundled in this repository.
