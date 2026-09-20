@@ -1,16 +1,10 @@
-# Excluded Cities (>50% NaN drop rate)
+# Excluded Cities
 
 These 136 cities are flagged as low-quality for analyses that depend on
-building/plot morphology metrics (non-absence-coded features). More than
-50% of each city's grid cells have NaN values in these metrics, typically
-because the city has very few mapped buildings relative to its grid extent
-(see the small "Original cells" counts below) — too sparse a sample for the
-per-cell morphology statistics (area, shape, alignment, etc.) to be
-reliably computed. Downstream users of `SHP_cleaned/` who need dense,
-well-populated building/plot morphology coverage should treat this list as
-a candidate exclusion set; users who only need the WSF3D, population, land
-cover, or road-network columns are not affected, since those columns are
-not NaN-coded on building absence.
+building/plot morphology metrics, due to sparse building coverage relative
+to grid extent. See the manuscript's Methods and Supplementary Information
+for the exclusion criterion. Columns unrelated to building/plot morphology
+are unaffected.
 
 **Retained cells after exclusion: 1,000,207**
 **Excluded cities: 136**
