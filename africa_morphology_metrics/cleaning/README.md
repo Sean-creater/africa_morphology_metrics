@@ -10,8 +10,8 @@ dataset, finally rejoining the cleaned attribute tables onto grid geometry
 to produce `SHP_cleaned/`.
 
 Across the ~8,393 cities in the study area, not every city's per-city
-Output/ CSV reached the full 172-column schema by the same route: some
-stalled at 114 columns (missing both height-derived and road-network
+Output/ CSV reaches the full 172-column schema by the same route: some
+stall at 114 columns (missing both height-derived and road-network
 metrics), some at 121 (missing only road-network metrics), and some at 165
 (missing only the 7 height-derived metrics, with road-network metrics
 already present). The scripts in this directory bring every city up to the
@@ -27,23 +27,23 @@ output directories.
 
 First run `python -m africa_morphology_metrics.cleaning.quality_summary`
 with `--data-root` and `--output` to produce the `quality_summary.csv`
-required by step 4. This ports the original `Metrix/data_quality_check.py`
-inventory calculation: column count plus the number of absent or entirely
-zero/NaN raster indicators. It is a prerequisite audit, not a data mutation.
+required by step 4: a per-city inventory of column count plus the number
+of absent or entirely zero/NaN raster indicators. It is a prerequisite
+audit, not a data mutation.
 
 The dependency order below was verified by tracing each script's actual
-file reads/writes (not just filename/mtime order). It matches the original
-numbered listing, with one exception noted under script 6.
+file reads/writes, not just script numbering.
 
-1. **`fix_ethiopia_pop2022.py`** — Recomputes Pop2022 for Ethiopian cities
-   directly from the WorldPop 2022 raster, because Ethiopia's original
-   population-resampling pass used a different code path than the rest of
-   the continent and produced unreliable values. Reads each city's grid
-   SHP + metrics CSV under `--data-root/Ethiopia/`, and a population TIF;
-   overwrites only the Pop2022 column in place. Independent of the other
-   scripts — can run at any point before the final QC pass, but is listed
-   first since it is a targeted country-specific correction upstream of
-   the general column-completion steps.
+1. **`recompute_ethiopia_population.py`** — Recomputes Pop2022 for
+   Ethiopian cities directly from the WorldPop 2022 raster, because
+   Ethiopia's population-resampling pass used a different code path than
+   the rest of the continent and produced unreliable values. Reads each
+   city's grid SHP + metrics CSV under `--data-root/Ethiopia/`, and a
+   population TIF; overwrites only the Pop2022 column in place.
+   Independent of the other scripts — can run at any point before the
+   final QC pass, but is listed first since it is a targeted
+   country-specific correction upstream of the general column-completion
+   steps.
 
 2. **`check_wsf3d_coverage.py`** — Diagnostic QC utility. Scans every
    city's H_max/H_mean/H_std/H_sum/V_sum/V_mean/V_max/V_std columns and
@@ -61,27 +61,27 @@ numbered listing, with one exception noted under script 6.
    that city. Reads per-city CSVs; writes a status report CSV. Read-only
    with respect to per-city data.
 
-4. **`derive_165_column_metrics.py`** (originally `fix_165col_derived_metrics.py`)
-   — Computes the 7 height-derived metrics (FloorARat, Mean_FormF,
-   Mean_H2F, Mean_VolDe, Std_FormF, Std_H2F, Std_VolDe) for cities whose
-   enrichment output stalled at 165 columns, from building footprints and
-   country height/volume rasters via momepy's FormFactor plus custom
-   H2F/FloorArea/VolumeDensity derivations, aggregated to grid cells by
-   spatial join. Reads a quality-summary CSV (`--quality-summary`, a
-   durable per-run reference table of each city's current column count,
-   not a throwaway diagnostic artifact) to select cities with
-   `n_cols == 165`; updates each city's CSV in place; copies cities that
-   pass a quality check into `--cleaned-dir`.
+4. **`derive_165_column_metrics.py`** — Computes the 7 height-derived
+   metrics (FloorARat, Mean_FormF, Mean_H2F, Mean_VolDe, Std_FormF,
+   Std_H2F, Std_VolDe) for cities whose enrichment output stalled at 165
+   columns, from building footprints and country height/volume rasters
+   via momepy's FormFactor plus custom H2F/FloorArea/VolumeDensity
+   derivations, aggregated to grid cells by spatial join. Reads a
+   quality-summary CSV (`--quality-summary`, a durable per-run reference
+   table of each city's current column count, not a throwaway diagnostic
+   artifact) to select cities with `n_cols == 165`; updates each city's
+   CSV in place; copies cities that pass a quality check into
+   `--cleaned-dir`.
 
-5. **`add_height_metrics.py`** (originally `fix_114col_add_height_metrics.py`)
-   — The same 7-column height-derivation logic as script 4, applied to the
-   larger set of cities that stalled at 114 columns (missing both
-   height-derived and road-network metrics). Brings these cities to the
-   121-column tier and updates `--city-inventory`'s `exclusion_reason`
-   from `col_114` to `col_121`, recording that only road-network metrics
-   remain outstanding. Road-network metrics are deliberately deferred to a
-   separate step (script 8) since they depend on OSM data that is fetched
-   independently of the raster/vector layers used here.
+5. **`add_height_metrics.py`** — The same 7-column height-derivation logic
+   as script 4, applied to the larger set of cities that stalled at 114
+   columns (missing both height-derived and road-network metrics). Brings
+   these cities to the 121-column tier and updates `--city-inventory`'s
+   `exclusion_reason` from `col_114` to `col_121`, recording that only
+   road-network metrics remain outstanding. Road-network metrics are
+   deliberately deferred to a separate step (script 8) since they depend
+   on OSM data that is fetched independently of the raster/vector layers
+   used here.
 
 6. **`check_col121_cities.py`** — Diagnostic QC utility verifying the
    col_121 tier (cities missing only the 51 road-network columns, i.e. the
@@ -98,25 +98,24 @@ numbered listing, with one exception noted under script 6.
    are added generally), but has an implicit soft dependency on the
    existence of at least one already-172-column city.
 
-7. **`verify_cleaned_output.py`** (originally `verify_cleaned_7787.py`,
-   renamed to drop the specific-run city count from the filename) —
-   Coarse pass/fail QC sweep over the entire cleaned-output directory:
-   column count, non-degenerate TIF/height/core-road columns, GridID
-   uniqueness. This is the first gate a city must pass once it reaches the
-   cleaned-output directory, run after scripts 4/5 have populated
-   `--cleaned-dir` and before road-network metrics are added, and again
-   after road-network metrics are added (script 8 runs this same class of
-   check internally as part of its own QC gate).
+7. **`verify_cleaned_output.py`** — Coarse pass/fail QC sweep over the
+   entire cleaned-output directory: column count, non-degenerate
+   TIF/height/core-road columns, GridID uniqueness. This is the first gate
+   a city must pass once it reaches the cleaned-output directory, run
+   after scripts 4/5 have populated `--cleaned-dir` and before
+   road-network metrics are added, and again after road-network metrics
+   are added (script 8 runs this same class of check internally as part
+   of its own QC gate).
 
-8. **`add_road_network_metrics.py`** (originally `fix_road_network_metrics.py`)
-   — Adds the 51 road-network/connectivity columns to col_121 cities:
-   downloads/clips OSM highway data per country, computes street-network
-   and connectivity metrics, merges them into each city's CSV, runs a
-   quality check, copies passing cities into `--cleaned-dir`, and updates
-   `--city-inventory` (status/exclusion_reason/n_cols). This is the step
-   that finally brings a city to the full 172-column schema. It depends on
-   upstream pipeline modules (street-network and connectivity metric
-   calculators, OSM highway processor, projection helper) from the bundled
+8. **`add_road_network_metrics.py`** — Adds the 51 road-network/
+   connectivity columns to col_121 cities: downloads/clips OSM highway
+   data per country, computes street-network and connectivity metrics,
+   merges them into each city's CSV, runs a quality check, copies passing
+   cities into `--cleaned-dir`, and updates `--city-inventory`
+   (status/exclusion_reason/n_cols). This is the step that finally brings
+   a city to the full 172-column schema. It depends on upstream pipeline
+   modules (street-network and connectivity metric calculators, OSM
+   highway processor, projection helper) from the bundled
    `africa_morphology_metrics` package. Run it with
    `python -m africa_morphology_metrics.cleaning.add_road_network_metrics`
    from the repository root (or install the package first); provide
@@ -189,23 +188,13 @@ directory:
   `SHP_cleaned/` that depends on dense building-morphology coverage.
 - `studyarea/study_area_48countries.shp` (+ .shx/.dbf/.prj/.cpg) — the
   48-country study-area boundary shapefile.
+- `quality_summary.csv` — the per-city column-count/abnormal-indicator
+  inventory produced by `quality_summary.py` and read by script 4.
 
-## Notes on run-artifact vs. reference data
+## Run-artifact vs. reference data
 
-Per the porting scope for this stage, ad-hoc diagnostic outputs
-(`quality_summary_3D_error.csv`, `quality_summary_LCLCFbuiltShannon_error.csv`,
-`quality_summary_172_error.csv`, `full_qc_colstats.csv`, `full_qc_issues.csv`,
-`full_qc_summary.txt`, `verify_cleaned_summary.txt`, `verify_cleaned_issues.csv`,
-`check_col121_issues.csv`, `no_iso3_mapping.csv`) are pure outputs of the
-check/verify scripts and are not checked in or read back in by any script
-in this pipeline.
-
-One file initially suspected of being a run artifact turned out to be
-durable reference data read as an **input**: `quality_summary.csv` (no
-suffix) is read by script 4 (`derive_165_column_metrics.py`, via
-`--quality-summary`) to select which cities have 165 columns — it is a
-per-run city/column-count inventory, distinct from the `*_error.csv`
-diagnostic outputs listed above, and is expected to exist before running
-script 4. `city_inventory.csv` is similarly durable state: it is both read
-and updated in place by scripts 5 and 8, and is checked in under
-`data/reference/`.
+The check/verify scripts in this directory (2, 3, 6, 7, 9) each produce
+their own diagnostic report when run. Those run-specific reports are not
+checked in or read back in by any other script in this pipeline; only the
+durable, checked-in reference tables above (`quality_summary.csv`,
+`city_inventory.csv`) are read as **inputs** by other scripts.

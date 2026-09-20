@@ -38,7 +38,7 @@ from .igraph_utils import (
     extract_vertex_values
 )
 
-from .connectivity_v37_networkx import (
+from .connectivity_networkx import (
     get_buffer_indices_fast,
     extract_node_ids_vectorized
 )
@@ -553,7 +553,7 @@ def calculate_connectivity_metrics(
     import time
     start_time = time.time()
 
-    from .connectivity_v37_networkx import (
+    from .connectivity_networkx import (
         precompute_spatial_mappings,
         build_grid_adjacency
     )

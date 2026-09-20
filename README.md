@@ -54,10 +54,9 @@ grid outputs before running it.
    attribute table onto grid geometry to produce the final SHP output. See
    `cleaning/README.md` for the full script-by-script run order.
 
-The orchestrator (`pipeline.py`, ported from the original
-`run_building_analysis_v15_integrated_osm.py`) drives stages 1-7 per city,
-with checkpointing (`checkpoint.py`) and coverage-gap tracking
-(`trackers.py`) across large batch runs, and optional email notifications
+The orchestrator (`pipeline.py`) drives stages 1-7 per city, with
+checkpointing (`checkpoint.py`) and coverage-gap tracking (`trackers.py`)
+across large batch runs, and optional email notifications
 (`notifications.py`).
 
 ## Installation
@@ -185,24 +184,23 @@ receive only small index lists per task).
 ## Why three connectivity implementations coexist
 
 `connectivity/` ships three implementations of `calculate_connectivity_metrics`,
-selected automatically at import time with the exact fallback structure the
-original codebase used:
+selected automatically at import time:
 
 ```python
 try:
     import igraph as ig
     try:
-        from .connectivity_v39_no_buffer import calculate_connectivity_metrics  # primary
+        from .connectivity_igraph_primary import calculate_connectivity_metrics  # primary
     except ImportError:
-        from .connectivity_v38_igraph import calculate_connectivity_metrics
+        from .connectivity_igraph_buffered import calculate_connectivity_metrics
 except ImportError:
-    from .connectivity_v37_networkx import calculate_connectivity_metrics  # igraph unavailable
+    from .connectivity_networkx import calculate_connectivity_metrics  # igraph unavailable
 ```
 
 The fallback is triggered purely by whether `import igraph` succeeds — not
 by any runtime performance check.
 
-- **`connectivity_v37_networkx`** — pure NetworkX/momepy. Its core
+- **`connectivity_networkx`** — pure NetworkX/momepy. Its core
   contribution is a **per-cell subgraph cache**: rather than rebuilding
   each grid cell's local street subgraph separately for the centrality
   pass, the topology pass, and the edge pass, it builds each cell's
@@ -211,27 +209,29 @@ by any runtime performance check.
   cell's subgraph includes some adjacent-cell context. This is also the
   sole source of `get_connectivity_column_mappings`, the shared output
   schema used by all three backends.
-- **`connectivity_v38_igraph`** — same buffered-subgraph-cache strategy as
-  v37, but stores each cached subgraph in both NetworkX and igraph form,
-  routing the three centrality computations (betweenness, closeness,
-  straightness) and edge betweenness through igraph's C implementation.
-  Node-degree/density, cyclomatic complexity, edge-node ratio, gamma
-  index, meshedness, and cul-de-sac length stay on NetworkX/momepy, since
-  those are already linear-time and not worth converting.
-- **`connectivity_v39_no_buffer`** (primary) — builds on v38's igraph
-  hybrid approach but removes the 6-neighbor cell buffer entirely: each
-  cell's subgraph contains only nodes physically within that cell, with no
-  adjacency-graph computation. To compensate for the lost context, it
-  splits metrics into a *topology* subgraph (counts all edges touching a
-  cell-internal node, even if the edge extends outside the cell — used for
-  Cyclomat, EdgeNdRat, GammaIdx, Meshedness) and a *geometry* subgraph
-  (cell-internal edges only, avoiding distortion from long edges that
-  extend outside the cell — used for MeanNdDst, EdgeBtwM/ClsM/StrM,
-  CuldesacL, centrality). It also computes intersection-degree counts
-  (DeadendCnt/InterCnt/3-way/4-way) from each node's *global* graph degree
-  rather than its subgraph degree, since subgraph extraction can otherwise
-  truncate a node's true degree. v39 additionally computes clustering
-  coefficient and COINS street continuity, neither present in v37/v38.
+- **`connectivity_igraph_buffered`** — same buffered-subgraph-cache
+  strategy as the NetworkX backend, but stores each cached subgraph in
+  both NetworkX and igraph form, routing the three centrality
+  computations (betweenness, closeness, straightness) and edge
+  betweenness through igraph's C implementation. Node-degree/density,
+  cyclomatic complexity, edge-node ratio, gamma index, meshedness, and
+  cul-de-sac length stay on NetworkX/momepy, since those are already
+  linear-time and not worth converting.
+- **`connectivity_igraph_primary`** (primary) — builds on the buffered
+  igraph backend's hybrid approach but removes the 6-neighbor cell buffer
+  entirely: each cell's subgraph contains only nodes physically within
+  that cell, with no adjacency-graph computation. To compensate for the
+  lost context, it splits metrics into a *topology* subgraph (counts all
+  edges touching a cell-internal node, even if the edge extends outside
+  the cell — used for Cyclomat, EdgeNdRat, GammaIdx, Meshedness) and a
+  *geometry* subgraph (cell-internal edges only, avoiding distortion from
+  long edges that extend outside the cell — used for MeanNdDst,
+  EdgeBtwM/ClsM/StrM, CuldesacL, centrality). It also computes
+  intersection-degree counts (DeadendCnt/InterCnt/3-way/4-way) from each
+  node's *global* graph degree rather than its subgraph degree, since
+  subgraph extraction can otherwise truncate a node's true degree. This
+  backend additionally computes clustering coefficient and COINS street
+  continuity, neither present in the other two backends.
 
 **COINS** ("Continuity in Street Networks") is momepy's angle-based
 street-continuity algorithm: it chains individual street segments into
@@ -264,12 +264,11 @@ not scale linearly.
   buildings near a raster cell boundary can be sensitive to exactly where
   their centroid falls.
 - **"No buffer zone" is a deliberate, cross-cutting simplification**, not
-  isolated to connectivity: `spatial_distribution_metrics.py` (v13) and
-  `connectivity_v39_no_buffer.py` both independently removed an earlier
-  neighbor-cell buffer concept in favor of analyzing only buildings/nodes
-  whose centroid falls within a cell's own boundary. This is simpler,
-  faster (no grid-adjacency computation), and consistent between the two
-  modules.
+  isolated to connectivity: `spatial_distribution_metrics.py` and
+  `connectivity_igraph_primary.py` both analyze only buildings/nodes whose
+  centroid falls within a cell's own boundary, rather than including
+  neighbor-cell context. This is simpler, faster (no grid-adjacency
+  computation), and consistent between the two modules.
 - **Zero-copy worker pools**: both `spatial_distribution_metrics.py` and
   the metric-calculation passes in `morphology_metrics.py` pass large
   GeoDataFrames to a multiprocessing worker pool exactly once via a pool

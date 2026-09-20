@@ -1,7 +1,6 @@
 """Inventory per-city column counts and missing or all-zero raster indicators.
 
-This is the portable version of ``Metrix/data_quality_check.py``. Its output
-provides the ``n_cols`` input to ``derive_165_column_metrics.py``.
+Its output provides the ``n_cols`` input to ``derive_165_column_metrics.py``.
 """
 
 import argparse
