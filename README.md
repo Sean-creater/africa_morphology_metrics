@@ -48,18 +48,18 @@ conda env create -f environment.yml
 conda activate africa_morphology_metrics
 # or: pip install -r requirements.txt
 pip install -e .          # optional, for the console entry point
-pip install -e geoworkflow/  # the vendored extraction backend
+pip install -e geoworkflow/  # the extraction backend
 ```
 
 Python 3.10+ is required. `python-igraph` is optional but recommended.
 
-### The vendored `geoworkflow` package
+### The `geoworkflow` package
 
 `geoworkflow/` is a general-purpose geospatial extraction/processing
-library (Cornell University, MIT licensed) that this pipeline's Open
-Buildings extraction builds on. It is vendored here because it is not
-published to PyPI; it carries its own MIT license, distinct from the rest
-of this pipeline (see License below).
+library, developed as a relatively independent module within this project
+and used here for the Open Buildings extraction stage. It is not published
+to PyPI, so it is installed from this checkout; it carries its own MIT
+license, distinct from the rest of this pipeline (see License below).
 
 ## Data source requirements
 
@@ -108,7 +108,7 @@ building/plot-morphology-dependent analyses for data-quality reasons.
 
 ```
 africa_morphology_metrics/   # package code (this repo)
-geoworkflow/                  # vendored extraction backend (own MIT license)
+geoworkflow/                  # extraction backend (own MIT license)
 data/
     reference/                 # small, checked-in reference/lookup data
     example/                   # real Ndioum input bundle and historical output
@@ -126,6 +126,6 @@ and reference output for one small city. See `data/example/README.md`.
 
 No license file was found in the source project this pipeline was derived
 from. Until a license is chosen, all rights are reserved by default; add a
-`LICENSE` file before distributing this code publicly. The vendored
-`geoworkflow/` dependency is the one exception: it carries its own MIT
-license (Copyright 2025 Cornell University — see `geoworkflow/LICENSE`).
+`LICENSE` file before distributing this code publicly. `geoworkflow/` is
+the one exception: it carries its own MIT license (Copyright 2025 Cornell
+University — see `geoworkflow/LICENSE`).

@@ -35,9 +35,9 @@ except ImportError:
 # The base extraction processor (S2 coverage loop, per-cell download and
 # filtering, export) lives in the `geoworkflow` framework
 # (TemplateMethodProcessor / GeospatialProcessorMixin and their supporting
-# core modules), which is out of scope for this module and is vendored
-# separately as a sibling package. It is imported here as an external
-# dependency, the same way the pipeline orchestrator resolves it.
+# core modules), developed as a relatively independent sibling package
+# within this project. It is imported here the same way the pipeline
+# orchestrator resolves it.
 sys.path.insert(0, str(Path(__file__).parent.parent / "geoworkflow" / "src"))
 from geoworkflow.processors.extraction.open_buildings_gcs import OpenBuildingsGCSProcessor as _BaseOpenBuildingsGCSProcessor
 from geoworkflow.core.exceptions import ConfigurationError
