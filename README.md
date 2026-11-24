@@ -56,10 +56,17 @@ Python 3.10+ is required. `python-igraph` is optional but recommended.
 ### The `geoworkflow` package
 
 `geoworkflow/` is a general-purpose geospatial extraction/processing
-library, developed as a relatively independent module within this project
-and used here for the Open Buildings extraction stage. It is not published
-to PyPI, so it is installed from this checkout; it carries its own MIT
-license, distinct from the rest of this pipeline (see License below).
+library maintained as its own independent project
+([jacksonfloods/geoworkflow](https://github.com/jacksonfloods/geoworkflow)),
+vendored here as a checked-in copy and used for the Open Buildings
+extraction stage. It is not published to PyPI, so it is installed from
+this checkout; it carries its own MIT license, distinct from the rest of
+this pipeline (see License below). Its CLI (`geoworkflow` console
+command) exposes more functionality than this pipeline uses directly —
+several subcommands (`process clip/align`, `visualize`, `extract
+archive/netcdf`, `pipeline`, `aoi`) are not yet implemented upstream;
+this project's own scripts call the underlying processor classes
+directly rather than going through the CLI.
 
 ## Data source requirements
 
