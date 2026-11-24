@@ -6,14 +6,14 @@ spatial-distribution morphology metrics, aggregated onto a 250 m
 hexagonal grid. Covers the ~8,393 city/town agglomerations in the
 AFRICAPOLIS inventory across 54 African countries.
 
-This is a companion pipeline to
-[`africa_hex_grid_workflow`](https://github.com/Sean-creater/africa_hex_grid_workflow),
-which builds the 250 m hexagonal grid and attaches building height/volume,
-population, and land cover statistics. This pipeline consumes that grid as
-an input and extends it with building morphology, street-network,
-connectivity, and spatial-distribution metrics derived from Google Open
-Buildings and OpenStreetMap, before running a data-cleaning/QC process to
-produce one standardized attribute table + shapefile per city.
+This is a companion pipeline to the `africa_hex_grid_workflow`
+repository, which builds the 250 m hexagonal grid and attaches building
+height/volume, population, and land cover statistics. This pipeline
+consumes that grid as an input and extends it with building morphology,
+street-network, connectivity, and spatial-distribution metrics derived
+from Google Open Buildings and OpenStreetMap, before running a
+data-cleaning/QC process to produce one standardized attribute table +
+shapefile per city.
 
 ## Pipeline stages
 
@@ -56,17 +56,11 @@ Python 3.10+ is required. `python-igraph` is optional but recommended.
 ### The `geoworkflow` package
 
 `geoworkflow/` is a general-purpose geospatial extraction/processing
-library maintained as its own independent project
-([jacksonfloods/geoworkflow](https://github.com/jacksonfloods/geoworkflow)),
-vendored here as a checked-in copy and used for the Open Buildings
-extraction stage. It is not published to PyPI, so it is installed from
-this checkout; it carries its own MIT license, distinct from the rest of
-this pipeline (see License below). Its CLI (`geoworkflow` console
-command) exposes more functionality than this pipeline uses directly —
-several subcommands (`process clip/align`, `visualize`, `extract
-archive/netcdf`, `pipeline`, `aoi`) are not yet implemented upstream;
-this project's own scripts call the underlying processor classes
-directly rather than going through the CLI.
+library, vendored here as a checked-in copy and used for the Open
+Buildings extraction stage. It is not published to PyPI, so it is
+installed from this checkout; it carries its own MIT license, distinct
+from the rest of this pipeline (see License below). This project's own
+scripts call its processor classes directly.
 
 ## Data source requirements
 
